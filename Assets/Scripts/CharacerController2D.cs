@@ -5,80 +5,36 @@ using UnityEngine;
 
 public class CharacerController2D : MonoBehaviour
 {
+    [SerializeField] private float _movementSpeed = 5f;
     
-    [SerializeField] private float movementSpeed = 5f;
-    
-    [SerializeField] private float jumpSpeed = 5f;
+    [SerializeField] private float _jumpHeight = 20f;
 
-    private Collision2D _groundDetect;
-    
-    private bool _isGrounded = false;
-
-    private bool _facingRight = true;
-
-    private Animator _anim;
-
-    private bool _gameStarted;
-    private Rigidbody2D _playerRb;
+    private bool _isGrounded, _jumpPressed, _moveAllowed, _gameStarted, _facingRight;
 
     private float _input;
 
-    private bool _wantToJump = false;
-
+    private Rigidbody2D _playerRb;
+    
     private InputMaster _inputMaster;
-    private void OnDisable()
-    {
-        _inputMaster.Disable();
-    }
+
+    public bool GameStarted => _gameStarted;
 
     private void Awake()
     {
-        EnableInput();
-        _inputMaster.Player.Move.performed += ctx => Move(ctx.ReadValue<float>());
-        _inputMaster.Player.Jump.performed += ctx => Jump(ctx.ReadValue<float>());
-    }
-
-    private void EnableInput()
-    {
         _inputMaster = new InputMaster();
         _inputMaster.Enable();
-    }
-    
-    // Start is called before the first frame update
-    void Start()
-    {
-        
         _playerRb = GetComponent<Rigidbody2D>();
         _gameStarted = false;
-        _anim = GetComponent<Animator>();
-    }
-
-    void Move(float direction)
-    {
-        if (direction > 0.5f)
-        {
-            _input = 1;
-        } else if (direction < -0.5f)
-        {
-            _input = -1;
-        }
-        else
-        {
-            _input = 0;
-        }
-    }
-
-    void Jump(float jump)
-    {
-        if (jump > 0 && _isGrounded)
-        {
-            _wantToJump = true;
-        }
+        _facingRight = true;
     }
     
-    // Update is called once per frame
-    void Update()
+    private void Update()
     {
+        _moveAllowed = true;
+        _input = _inputMaster.Player.Move.ReadValue<float>();
+        _isGrounded = false;
+        
+        
         if (_input > 0)
         {
             _gameStarted = true;
@@ -94,24 +50,35 @@ public class CharacerController2D : MonoBehaviour
                 Flip();
             }
         }
-    }
-    
-    private void FixedUpdate()
-    {
-        
-        _isGrounded = false;
-        RaycastHit2D[] hits = Physics2D.RaycastAll(transform.position, Vector2.down, 1.25f);
-        
+
+        Vector3 playerPos = transform.position;
+        Vector3 rayPos = new Vector3(playerPos.x - 0.3f, playerPos.y - 0.5f);
+        RaycastHit2D[] hits = Physics2D.RaycastAll(rayPos, Vector2.down, 1.25f);
+        Debug.DrawRay(rayPos, Vector2.down);
         foreach (RaycastHit2D hit in hits)
         {
             if (hit.collider.CompareTag("Ground"))
             {
                 _isGrounded = true;
+                break;
+            }
+        }
+
+        if (!_isGrounded)
+        {
+            rayPos = new Vector3(playerPos.x + 0.3f, playerPos.y - 0.5f);
+            hits = Physics2D.RaycastAll(rayPos, Vector2.down, 1.25f);
+            foreach (RaycastHit2D hit in hits)
+            {
+                if (hit.collider.CompareTag("Ground"))
+                {
+                    _isGrounded = true;
+                    break;
+                }
             }
         }
         
         Vector2 raycast = new Vector2();
-
         if (_facingRight)
         {
             raycast = Vector2.right;
@@ -121,50 +88,41 @@ public class CharacerController2D : MonoBehaviour
             raycast = Vector2.left;
         }
 
-        Vector2 traPos = transform.position;
-        Vector2 rayStart = new Vector2(traPos.x, traPos.y - 0.6f);
-
-        hits = Physics2D.RaycastAll(rayStart, raycast, 1f);
-        Debug.DrawRay(rayStart, raycast, Color.cyan);
+        Vector3 test = transform.position;
+        test.y = test.y - 0.6f;
+        
+        hits = Physics2D.RaycastAll(test, raycast, 0.5f);
         foreach (RaycastHit2D hit in hits)
         {
             if (hit.collider.CompareTag("Ground"))
             {
-                _isGrounded = true;
+                _moveAllowed = false;
             }
         }
+
+        if (_moveAllowed)
+        {
+            Transform pTransform = transform;
+            Vector2 position = pTransform.position;
+            transform.Translate(Vector2.right * (_input * (Time.deltaTime * _movementSpeed)));    
+        }
         
-        HandleMovement();
+        if (_inputMaster.Player.Jump.triggered)
+        {
+            _jumpPressed = true;
+        }
     }
 
-    private void HandleMovement()
+    private void FixedUpdate()
     {
-        float jump = 0f;
-        if (_wantToJump && _isGrounded)
+        if (_jumpPressed)
         {
-            jump = 1.0f * (jumpSpeed * Time.deltaTime);
-            _wantToJump = false;
-        }
-
-        float h = _input * (movementSpeed * Time.deltaTime);
-        transform.Translate(new Vector3(h, 0));
-        
-        if (_isGrounded)
-        {
-            if (jump > 0f)
+            _jumpPressed = !_jumpPressed;
+    
+            if (_isGrounded)
             {
-                _playerRb.AddForce(new Vector2(0, (jumpSpeed * Time.fixedDeltaTime)), ForceMode2D.Impulse);
-                _anim.SetBool("isNotOnGround", true);
-                _anim.SetBool("isRunning", false);
-            } else if (h != 0f)
-            {
-                _anim.SetBool("isNotOnGround", false);
-                _anim.SetBool("isRunning", true);
-            }
-            else
-            {
-                _anim.SetBool("isNotOnGround", false);
-                _anim.SetBool("isRunning", false);
+                _playerRb.AddForce(new Vector2(0, (_jumpHeight * Time.fixedDeltaTime)), ForceMode2D.Impulse);
+                _isGrounded = false;
             }
         }
     }
@@ -172,26 +130,9 @@ public class CharacerController2D : MonoBehaviour
     void Flip()
     {
         _facingRight = !_facingRight;
-        Vector3 scale = transform.localScale;
+        Transform pTransform = transform;
+        Vector3 scale = pTransform.localScale;
         scale.x *= -1;
-        transform.localScale = scale;
-    }
-
-    public bool GameStarted => _gameStarted;
-
-    private void OnCollisionEnter2D(Collision2D other)
-    {
-        if (other.collider.CompareTag("Ground"))
-        {
-            _isGrounded = true;
-        }
-    }
-
-    private void OnCollisionExit2D(Collision2D other)
-    {
-        if (other.collider.CompareTag("Ground"))
-        {
-            _isGrounded = false;
-        }
+        pTransform.localScale = scale;
     }
 }

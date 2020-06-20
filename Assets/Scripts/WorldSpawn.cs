@@ -22,9 +22,7 @@ public class WorldSpawn : MonoBehaviour
 
     private const int MinHeight = -40;
 
-    private float _destroyTimer;
-
-    private float _createTimer;
+    private float _destroyTimer, _createTimer, _delayedDestroy;
     
     private List<GameObject> _grounds;
 
@@ -32,17 +30,19 @@ public class WorldSpawn : MonoBehaviour
 
     private GameObject _player;
 
-    private float _delayedDestroy;
-
     private const float TransitionToHigherCreateTime = 15;
 
     private Dictionary<float, List<GameObject>> _undergrounds;
     
     private short _gapCounter = 0;
 
+    private GameObject _saver;
+
     // Start is called before the first frame update
     void Start()
     {
+        
+        _saver = GameObject.Find("ScoreSaver");
         _destroyTimer = destroyTime;
         _createTimer = createTime;
         _undergrounds = new Dictionary<float, List<GameObject>>();
@@ -109,6 +109,10 @@ public class WorldSpawn : MonoBehaviour
     {
         if (_player.transform.position.y <= MinHeightMovable)
         {
+            if (_saver != null)
+            {
+                _saver.GetComponent<ScoreData>().Save();
+            }
             SceneManager.LoadScene("Scenes/MainGame");
         }
         if ((_grounds[_grounds.Count-1].transform.position.x - _player.transform.position.x) > TransitionToHigherCreateTime )
