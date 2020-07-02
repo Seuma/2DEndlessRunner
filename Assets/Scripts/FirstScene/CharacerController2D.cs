@@ -17,6 +17,8 @@ public class CharacerController2D : MonoBehaviour
     
     private InputMaster _inputMaster;
 
+    private Animator _anim;
+
     public bool GameStarted => _gameStarted;
 
     private void Awake()
@@ -27,7 +29,12 @@ public class CharacerController2D : MonoBehaviour
         _gameStarted = false;
         _facingRight = true;
     }
-    
+
+    private void Start()
+    {
+        _anim = GetComponent<Animator>();
+    }
+
     private void Update()
     {
         _moveAllowed = true;
@@ -35,21 +42,7 @@ public class CharacerController2D : MonoBehaviour
         _isGrounded = false;
         
         
-        if (_input > 0)
-        {
-            _gameStarted = true;
-            if (!_facingRight)
-            {
-                Flip();
-            }
-        } else if (_input < 0)
-        {
-            _gameStarted = true;
-            if (_facingRight)
-            {
-                Flip();
-            }
-        }
+        
 
         Vector3 playerPos = transform.position;
         Vector3 rayPos = new Vector3(playerPos.x - 0.3f, playerPos.y - 0.5f);
@@ -111,6 +104,36 @@ public class CharacerController2D : MonoBehaviour
         {
             _jumpPressed = true;
         }
+        
+        if (_input > 0)
+        {
+            _gameStarted = true;
+            if (!_facingRight)
+            {
+                Flip();
+            }
+            if (_isGrounded)
+                _anim.SetBool("isRunning", true);
+            else 
+                _anim.SetBool("isRunning", false);
+        } else if (_input < 0)
+        {
+            _gameStarted = true;
+            if (_facingRight)
+            {
+                Flip();
+            }
+            if (_isGrounded)
+                _anim.SetBool("isRunning", true);
+            else
+                _anim.SetBool("isRunning", false);
+        } else
+            _anim.SetBool("isRunning", false);
+        
+        if (!_isGrounded)
+            _anim.SetBool("isNotOnGround", true);
+        else 
+            _anim.SetBool("isNotOnGround", false);
     }
 
     private void FixedUpdate()
