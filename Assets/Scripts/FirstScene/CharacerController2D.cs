@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Assertions.Must;
 
 public class CharacerController2D : MonoBehaviour
 {
@@ -19,6 +20,8 @@ public class CharacerController2D : MonoBehaviour
 
     private Animator _anim;
 
+    private bool _isInCutscene = false;
+    
     public bool GameStarted => _gameStarted;
 
     private void Awake()
@@ -33,6 +36,7 @@ public class CharacerController2D : MonoBehaviour
     private void Start()
     {
         _anim = GetComponent<Animator>();
+        StartCoroutine(GameObject.Find("/CutsceneManager").GetComponent<CutsceneManager>().StartTutorial());        
     }
 
     private void Update()
@@ -41,9 +45,6 @@ public class CharacerController2D : MonoBehaviour
         _input = _inputMaster.Player.Move.ReadValue<float>();
         _isGrounded = false;
         
-        
-        
-
         Vector3 playerPos = transform.position;
         Vector3 rayPos = new Vector3(playerPos.x - 0.3f, playerPos.y - 0.5f);
         RaycastHit2D[] hits = Physics2D.RaycastAll(rayPos, Vector2.down, 1.25f);
@@ -93,6 +94,14 @@ public class CharacerController2D : MonoBehaviour
             }
         }
 
+
+        _isInCutscene = false;
+        if (GameObject.Find("/CutsceneManager").GetComponent<CutsceneManager>().isInCutscene)
+        {
+            _moveAllowed = false;
+            _isInCutscene = true;
+        }
+
         if (_moveAllowed)
         {
             Transform pTransform = transform;
@@ -104,35 +113,48 @@ public class CharacerController2D : MonoBehaviour
         {
             _jumpPressed = true;
         }
+
         
         if (_input > 0)
         {
-            _gameStarted = true;
-            if (!_facingRight)
+            if (_moveAllowed)
+            {
+                _gameStarted = true;
+            }
+
+            if (!_facingRight && !_isInCutscene)
             {
                 Flip();
             }
-            if (_isGrounded)
-                _anim.SetBool("isRunning", true);
-            else 
-                _anim.SetBool("isRunning", false);
-        } else if (_input < 0)
-        {
-            _gameStarted = true;
-            if (_facingRight)
-            {
-                Flip();
-            }
-            if (_isGrounded)
+            
+            if (_isGrounded && !_isInCutscene)
                 _anim.SetBool("isRunning", true);
             else
                 _anim.SetBool("isRunning", false);
-        } else
+        }
+        else if (_input < 0)
+        {
+            if (_moveAllowed)
+            {
+                _gameStarted = true;
+            }
+
+            if (_facingRight && !_isInCutscene)
+            {
+                Flip();
+            }
+            
+            if (_isGrounded && !_isInCutscene)
+                _anim.SetBool("isRunning", true);
+            else
+                _anim.SetBool("isRunning", false);
+        }
+        else
             _anim.SetBool("isRunning", false);
-        
+
         if (!_isGrounded)
             _anim.SetBool("isNotOnGround", true);
-        else 
+        else
             _anim.SetBool("isNotOnGround", false);
     }
 
@@ -142,7 +164,7 @@ public class CharacerController2D : MonoBehaviour
         {
             _jumpPressed = !_jumpPressed;
     
-            if (_isGrounded)
+            if (_isGrounded && !_isInCutscene)
             {
                 _playerRb.AddForce(new Vector2(0, (_jumpHeight * Time.fixedDeltaTime)), ForceMode2D.Impulse);
                 _isGrounded = false;

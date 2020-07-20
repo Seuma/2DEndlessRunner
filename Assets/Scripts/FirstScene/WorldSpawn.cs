@@ -38,10 +38,12 @@ public class WorldSpawn : MonoBehaviour
 
     private GameObject _saver;
 
+    private CutsceneManager _CutsceneManager;
+
     // Start is called before the first frame update
     void Start()
     {
-        
+        _CutsceneManager = GameObject.Find("/CutsceneManager").GetComponent<CutsceneManager>();
         _saver = GameObject.Find("ScoreSaver");
         _destroyTimer = destroyTime;
         _createTimer = createTime;
@@ -113,7 +115,9 @@ public class WorldSpawn : MonoBehaviour
             {
                 _saver.GetComponent<ScoreData>().Save();
             }
-            SceneManager.LoadScene("Scenes/MainGame");
+
+            _CutsceneManager.AddDeath();
+            //SceneManager.LoadScene("Scenes/MainGame");
         }
         if ((_grounds[_grounds.Count-1].transform.position.x - _player.transform.position.x) > TransitionToHigherCreateTime )
         {
